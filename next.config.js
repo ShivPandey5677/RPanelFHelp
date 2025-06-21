@@ -1,9 +1,10 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
+// next.config.js
+module.exports = {
+  webpack(config) {
+    config.resolve.fallback = {
+      bufferutil: false,
+      'utf-8-validate': false,
+    };
+    return config;
   },
-  images: { unoptimized: true },
 };
-
-module.exports = nextConfig;
