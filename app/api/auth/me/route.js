@@ -1,6 +1,17 @@
 import { NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
+
+// Create a Supabase client with the auth token from the request
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+)
 
 // Opt out of static generation
 export const dynamic = 'force-dynamic'
@@ -19,33 +30,37 @@ export async function GET(request) {
       )
     }
 
-    const decoded = verifyToken(token)
-    if (!decoded) {
+    // Verify the token with Supabase
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
+    
+    if (authError || !authUser) {
       return NextResponse.json(
         { error: 'Invalid token' },
         { status: 401 }
       )
     }
 
+    // Get the user's profile from the public.users table
     const { data: user, error } = await supabase
       .from('users')
       .select('id, name, email')
-      .eq('id', decoded.userId)
+      .eq('id', authUser.id)
       .single()
 
-    if (error || !user) {
+    if (error) throw error
+    if (!user) {
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: 'User profile not found' },
         { status: 404 }
       )
     }
 
-    return NextResponse.json({ user })
+    return NextResponse.json(user)
   } catch (error) {
     console.error('Auth check error:', error)
     return NextResponse.json(
       { error: 'Authentication failed' },
-      { status: 500 }
+      { status: 401 }
     )
   }
 }
