@@ -7,7 +7,7 @@ const navItems = [
 ]
 
 export default function Navbar() {
-  const pathname = usePathname()
+  const pathname = usePathname() || ''
 
   return (
     <nav className="w-full bg-blue-600 text-white shadow-md">
