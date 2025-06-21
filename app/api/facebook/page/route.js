@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 export async function GET(request) {
   try {
     const authHeader = request.headers.get('authorization')
-    const token = authHeader?.replace('Bearer ', '')
+    const token = authHeader ? authHeader.replace(/^Bearer\s+/i, '') : ''
 
     if (!token) {
       return NextResponse.json(
@@ -45,7 +45,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const authHeader = request.headers.get('authorization')
-    const token = authHeader?.replace('Bearer ', '')
+    const token = authHeader ? authHeader.replace(/^Bearer\s+/i, '') : ''
 
     if (!token) {
       return NextResponse.json({ error: 'No token provided' }, { status: 401 })
@@ -84,7 +84,7 @@ export async function POST(request) {
 export async function DELETE(request) {
   try {
     const authHeader = request.headers.get('authorization')
-    const token = authHeader?.replace('Bearer ', '')
+    const token = authHeader ? authHeader.replace(/^Bearer\s+/i, '') : ''
 
     if (!token) {
       return NextResponse.json(
