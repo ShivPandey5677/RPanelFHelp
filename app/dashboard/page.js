@@ -263,7 +263,7 @@ export default function DashboardPage() {
                               : 'bg-gray-200 text-gray-900'
                           }`}
                         >
-                          <p className="text-sm">{message.content}</p>
+                          <p className="text-sm">{message.body}</p>
                         </div>
                         <p className="text-xs text-gray-500 mt-1">
                           {message.sender_name} - {formatTime(message.created_at)}

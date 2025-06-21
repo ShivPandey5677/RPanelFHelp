@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth'
+import { verifyToken, supabaseAdmin } from '@/lib/auth'
+import { FacebookAPI } from '@/lib/facebook'
 
 export async function GET(request, { params }) {
   try {
@@ -23,43 +24,13 @@ export async function GET(request, { params }) {
 
     const conversationId = params.id
 
-    // Mock messages data
-    const messages = conversationId === '1' ? [
-      {
-        id: '1',
-        conversation_id: '1',
-        sender_id: 'amit_rg',
-        sender_name: 'Amit RG',
-        content: 'Is it in stock right now?',
-        created_at: new Date(Date.now() - 2 * 60 * 1000).toISOString()
-      },
-      {
-        id: '2',
-        conversation_id: '1',
-        sender_id: 'agent',
-        sender_name: 'Richard Panel',
-        content: "We've 3 left in stock!",
-        created_at: new Date(Date.now() - 1 * 60 * 1000).toISOString()
-      },
-      {
-        id: '3',
-        conversation_id: '1',
-        sender_id: 'agent',
-        sender_name: 'Richard Panel',
-        content: 'If you order before 8PM we can ship it today.',
-        created_at: new Date().toISOString()
-      }
-    ] : [
-      {
-        id: '4',
-        conversation_id: '2',
-        sender_id: 'hiten_saxena',
-        sender_name: 'Hiten Saxena',
-        content: 'Hi do you have any T-Shirt available in stock right now?',
-        created_at: new Date(Date.now() - 10 * 60 * 1000).toISOString()
-      }
-    ]
-
+    // Fetch messages from database
+    const { data: messages, error: msgError } = await supabaseAdmin
+      .from('messages')
+      .select('*')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true })
+    if (msgError) throw msgError
     return NextResponse.json({ messages })
   } catch (error) {
     console.error('Get messages error:', error)
@@ -93,16 +64,46 @@ export async function POST(request, { params }) {
     const { message } = await request.json()
     const conversationId = params.id
 
-    // Here you would typically:
-    // 1. Save the message to the database
-    // 2. Send the message via Facebook Messenger API
-    
+    // Save the message in DB
+    const { data: msgInsert, error: insertError } = await supabaseAdmin
+      .from('messages')
+      .insert({
+        conversation_id: conversationId,
+        sender_id: decoded.userId,
+        sender_name: 'Agent',
+        body: message
+      })
+      .select()
+      .single()
+    if (insertError) throw insertError
+
+    // Get conversation and page token
+    const { data: conv, error: convError } = await supabaseAdmin
+      .from('conversations')
+      .select('page_id, customer_id')
+      .eq('id', conversationId)
+      .single()
+    if (convError) throw convError
+
+    const { data: pageRow, error: pageError } = await supabaseAdmin
+      .from('facebook_pages')
+      .select('access_token')
+      .eq('user_id', decoded.userId)
+      .eq('page_id', conv.page_id)
+      .single()
+    if (pageError) throw pageError
+
+    // Send via FB
+    try {
+      const fb = new FacebookAPI(pageRow.access_token)
+      await fb.sendMessage(conv.customer_id, message)
+    } catch (fbErr) {
+      console.error('FB send error', fbErr)
+    }
+
     console.log(`Sending message "${message}" to conversation ${conversationId}`)
 
-    return NextResponse.json({ 
-      message: 'Message sent successfully',
-      id: Date.now().toString()
-    })
+    return NextResponse.json({ message: 'Message sent successfully', id: msgInsert.id })
   } catch (error) {
     console.error('Send message error:', error)
     return NextResponse.json(

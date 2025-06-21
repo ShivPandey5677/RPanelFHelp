@@ -61,7 +61,8 @@ export default function IntegrationPage() {
   }
 
   const handleConnectPage = () => {
-    window.location.href = '/api/auth/facebook'
+    const token = localStorage.getItem('token')
+  window.location.href = `/api/auth/facebook?token=${encodeURIComponent(token || '')}`
   }
 
   const handleDeleteIntegration = async () => {
