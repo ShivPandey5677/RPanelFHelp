@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 
+// Opt out of static generation
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+export const fetchCache = 'force-no-store'
+
 export async function GET(request) {
   try {
     const authHeader = request.headers.get('authorization')
