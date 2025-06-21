@@ -22,6 +22,20 @@ export default function RegisterPage() {
     setLoading(true)
     setError('')
 
+    // Additional client-side validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address')
+      setLoading(false)
+      return
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long')
+      setLoading(false)
+      return
+    }
+
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
@@ -34,10 +48,16 @@ export default function RegisterPage() {
       const data = await response.json()
 
       if (response.ok) {
-        localStorage.setItem('token', data.token)
-        router.push('/dashboard')
+        if (data.user.emailConfirmed === false) {
+          // Show success message and redirect to login
+          alert('Registration successful! Please check your email to confirm your account.')
+          router.push('/login')
+        } else {
+          // This should not happen as we're not auto-logging in anymore
+          router.push('/dashboard')
+        }
       } else {
-        setError(data.error || 'Registration failed')
+        setError(data.error || 'Registration failed. ' + (data.message || ''))
       }
     } catch (error) {
       setError('Something went wrong')
@@ -78,9 +98,14 @@ export default function RegisterPage() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="manoj@richpanel.com"
+                onChange={(e) => setEmail(e.target.value.trim())}
+                onInvalid={(e) => {
+                  e.target.setCustomValidity('Please enter a valid email address')
+                }}
+                onInput={(e) => e.target.setCustomValidity('')}
+                placeholder="example@domain.com"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                pattern="[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$"
                 required
               />
             </div>

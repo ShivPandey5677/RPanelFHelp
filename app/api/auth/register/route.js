@@ -4,7 +4,9 @@ import { supabase } from '@/lib/auth'
 
 export async function POST(request) {
   try {
-    const { name, email, password } = await request.json()
+    const body = await request.json()
+    console.log('Request body:', JSON.stringify(body, null, 2))
+    const { name, email, password } = body
 
     if (!name || !email || !password) {
       return NextResponse.json(
@@ -16,29 +18,16 @@ export async function POST(request) {
     // Create the user using our auth function
     const user = await createUser(name, email, password)
     
-    // Sign in the user to get a session
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-
-    if (error) {
-      console.error('Auto login after registration failed:', error)
-      // Still return success since the user was created, just not logged in
-      return NextResponse.json({
-        message: 'User created successfully. Please log in.',
-        user: { id: user.id, name: user.name, email: user.email }
-      })
-    }
-
-    // Get the session
-    const { data: { session } } = await supabase.auth.getSession()
-
+    // The user will need to confirm their email before logging in
     return NextResponse.json({
-      message: 'Registration and login successful',
-      token: session.access_token,
-      user: { id: user.id, name: user.name, email: user.email }
-    })
+      message: 'Registration successful! Please check your email to confirm your account.',
+      user: { 
+        id: user.id, 
+        name: user.name, 
+        email: user.email,
+        emailConfirmed: false
+      }
+    }, { status: 201 })
   } catch (error) {
     console.error('Registration error:', error)
     return NextResponse.json(
